@@ -163,7 +163,7 @@ void objToMesh(vector<string> data) {
 				cout << "exception" << endl;
 			}
 
-			if (data[i].rfind('V', 0) == 0 && needSubmesh) {
+			if (data[i].rfind('V', 0) == 0 && needSubmesh == true) {
 				SubMesh s;
 				s._r = c._r;
 				s._g = c._g;
@@ -171,6 +171,7 @@ void objToMesh(vector<string> data) {
 				s._a = c._a;
 				currentSubmesh++;
 				submeshes.push_back(s);
+				subMeshVertices.push_back(0);
 				needSubmesh = false;
 
 
@@ -193,7 +194,7 @@ void objToMesh(vector<string> data) {
 					c._a = 255;
 				}
 
-				if (needSubmesh) {
+				if (needSubmesh == true) {
 					SubMesh s;
 					s._r = c._r;
 					s._g = c._g;
@@ -201,6 +202,7 @@ void objToMesh(vector<string> data) {
 					s._a = c._a;
 					currentSubmesh++;
 					submeshes.push_back(s);
+					subMeshVertices.push_back(0);
 					needSubmesh = false;
 				}
 				else {
@@ -306,6 +308,7 @@ void objToMesh(vector<string> data) {
 				toappend = getBytes(v._n._y);
 				vtxDef.insert(vtxDef.end(), toappend.begin(), toappend.end());
 				toappend = getBytes(v._n._z);
+				vtxDef.insert(vtxDef.end(), toappend.begin(), toappend.end());
 
 				mesh.insert(mesh.end(), vtxDef.begin(), vtxDef.end());
 
@@ -322,9 +325,9 @@ void objToMesh(vector<string> data) {
 				vector<byte> tDef;
 				toappend = getBytes(t._v1);
 				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
-				toappend = getBytes(t._v2);
-				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
 				toappend = getBytes(t._v3);
+				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
+				toappend = getBytes(t._v2);
 				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
 				mesh.insert(mesh.end(), tDef.begin(), tDef.end());
 
@@ -376,26 +379,26 @@ int main(int argc, char **argv)
 {
 	if (argc != 3) {
 		cout << "invalid number of arguements, please run this tool from the command line" << endl;
-
+		return 0;
 	}
 	else
 	{
 		_pathToMesh = argv[1];
 		_pathToOutput = argv[2];
+		cout << "Reading from " << _pathToMesh << ", Writing to " << _pathToOutput << endl;
+		ifstream ifs;
+		string line;
+		vector<string> bin;
+		ifs.open(_pathToMesh);
+		while (getline(ifs, line)) {
+			bin.push_back(line);
+		}
+		objToMesh(bin);
 		
 	}
 
-	_pathToMesh = "tactical_log.obj";
-	_pathToOutput = "out.mesh";
-	cout << "Reading from " << _pathToMesh << ", Writing to " << _pathToOutput << endl;
-	ifstream ifs;
-	string line;
-	vector<string> bin;
-	ifs.open(_pathToMesh);
-	while (getline(ifs, line)) {
-		bin.push_back(line);
-	}
-	objToMesh(bin);
+	
+	
 
 	// main bit of code
 
