@@ -136,6 +136,8 @@ vector<string> split(string const& str, char const& delim) {
 }
 
 
+
+
 int main(int argc, char **argv)
 {
 	if (argc != 3) {
@@ -150,7 +152,7 @@ int main(int argc, char **argv)
 	}
 
 	// main bit of code
-	
+
 }
 
 
@@ -183,14 +185,14 @@ void objToMesh(string data[]) {
 				currentSubmesh++;
 				submeshes.push_back(s);
 				needSubmesh = false;
-				
+
 
 			}
 
 			// object 'o'
 			if (data[i].rfind('o', 0) == 0) {
 				if (data[i].find('/') != string::npos) {
-					vector<string> out;
+
 					vector<string> cv = split(split(split(data[i], ' ')[1], '/')[0], '-');
 					c._r = stoi(cv[0]);
 					c._g = stoi(cv[1]);
@@ -224,9 +226,66 @@ void objToMesh(string data[]) {
 
 			// vertex 'v'
 			else if (data[i].rfind('v', 0) == 0 && data[i].rfind("vt", 0) != 0 && data[i].rfind("vn", 0) != 0) {
-
+				vector<string> v = split(data[i], ' ');
+				float vx = stof(v[i]);
+				float vy = stof(v[2]);
+				float vz = stof(v[3]);
+				Vertex vtx = Vertex(vx, vy, vz, c._r, c._g, c._b, c._a);
+				submeshes[currentSubmesh].addVertex(vtx);
+				submeshes[currentSubmesh].setcullingMax(vx, vy, vz);
+				submeshes[currentSubmesh].setCullingMin(vx, vy, vz);
+				vertexCount++;
+				subMeshVertices[currentSubmesh + (int)1]++;
 			}
+
+			// vertex normals
+
+			else if (data[i].rfind("vn", 0) == 0) {
+				vector<string> n = split(data[i], ' ');
+				float nx = stof(n[1]);
+				float ny = stof(n[2]);
+				float nz = stof(n[3]);
+				normals.push_back(Normal(nx, ny, nz));
+			}
+
+			// material usemtl
+			else if (data[i].rfind("usemtl", 0) == 0) {
+				uint16_t shaderID = 0;
+				if (data[i].find('/') != string::npos) {
+					shaderID = stoi(split(split(data[i], ' ')[1], '/')[0]);
+				}
+				submeshes[currentSubmesh].setShader(shaderID);
+			}
+
+			// face f
+			else if (data[i].rfind('f', 0) == 0) {
+				vector<string> t = split(data[i], ' ');
+				int nidxv1 = stoi(split(t[1], '/')[2]) - 1;
+				int nidxv2 = stoi(split(t[2], '/')[2]) - 1;
+				int nidxv3 = stoi(split(t[3], '/')[2]) - 1;
+				uint16_t v1 = (uint16_t)stoi(split(t[1], '/')[0]) - 1;
+				uint16_t v2 = (uint16_t)stoi(split(t[2], '/')[0]) - 1;
+				uint16_t v3 = (uint16_t)stoi(split(t[3], '/')[0]) - 1;
+				Triangle trg = Triangle(v1, v2, v3);
+				int toSubtract = 0;
+				for (int j = 0; j < subMeshVertices.size() - 1; j++) {
+					toSubtract += subMeshVertices[j];
+				}
+				submeshes[currentSubmesh]._vertices[v1 - (uint16_t)toSubtract].setNormal(normals[nidxv1]);
+				submeshes[currentSubmesh]._vertices[v2 - (uint16_t)toSubtract].setNormal(normals[nidxv2]);
+				submeshes[currentSubmesh]._vertices[v3 - (uint16_t)toSubtract].setNormal(normals[nidxv3]);
+
+				submeshes[currentSubmesh].addTriangle(trg);
+				needSubmesh = true;
+				
+			}
+
+			// hehe, thats it for that bit, now to write it all
+
+
 		}
+		vector<byte> mesh;
+		mesh.push_back(0x6D);
 	}
 	catch (exception) {
 
