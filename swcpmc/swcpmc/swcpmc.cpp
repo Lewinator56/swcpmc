@@ -4,6 +4,7 @@
 #include "swcpmc.h"
 #include <array>
 #include <sstream>
+#include <fstream>
 
 using namespace std;
 using byte = unsigned char;
@@ -134,31 +135,15 @@ vector<string> split(string const& str, char const& delim) {
 	return out;
 
 }
-
-
-
-
-int main(int argc, char **argv)
-{
-	if (argc != 3) {
-		cout << "invalid number of arguements, please run this tool from the command line" << endl;
-		return 0;
-	}
-	else
-	{
-		_pathToMesh = argv[1];
-		_pathToOutput = argv[2];
-		cout << "Reading from " << _pathToMesh << ", Writing to " << _pathToOutput << endl;
-	}
-
-	// main bit of code
-
+template <typename T>
+vector<byte> getBytes(T in) {
+	byte* bytePointer = reinterpret_cast<byte*>(&in);
+	return vector<byte>(bytePointer, bytePointer + sizeof(T));
 }
 
 
-
-void objToMesh(string data[]) {
-	string error = "";
+void objToMesh(vector<string> data) {
+	string error;
 	try {
 		uint16_t vertexCount = 0;
 		Color c = Color(255, 125, 0, 255);
@@ -169,12 +154,14 @@ void objToMesh(string data[]) {
 		int currentSubmesh = -1;
 		subMeshVertices.push_back(0);
 		bool needSubmesh = true;
-
-		for (int i = 0; i < sizeof(data); i++) {
+		cout << data.size() << endl;
+		for (int i = 0; i < data.size(); i++) {
 			try {
-				error = data[i].substr(0, data[i].find_first_of(' '));
+				error = data[i].substr(0, data[i].find_first_of(" "));
 			}
-			catch (exception) {}
+			catch (exception e) {
+				cout << "exception" << endl;
+			}
 
 			if (data[i].rfind('V', 0) == 0 && needSubmesh) {
 				SubMesh s;
@@ -227,7 +214,7 @@ void objToMesh(string data[]) {
 			// vertex 'v'
 			else if (data[i].rfind('v', 0) == 0 && data[i].rfind("vt", 0) != 0 && data[i].rfind("vn", 0) != 0) {
 				vector<string> v = split(data[i], ' ');
-				float vx = stof(v[i]);
+				float vx = stof(v[1]);
 				float vy = stof(v[2]);
 				float vz = stof(v[3]);
 				Vertex vtx = Vertex(vx, vy, vz, c._r, c._g, c._b, c._a);
@@ -277,17 +264,143 @@ void objToMesh(string data[]) {
 
 				submeshes[currentSubmesh].addTriangle(trg);
 				needSubmesh = true;
-				
+
 			}
 
 			// hehe, thats it for that bit, now to write it all
 
 
 		}
-		vector<byte> mesh;
-		mesh.push_back(0x6D);
-	}
-	catch (exception) {
+		vector<byte> mesh = {};
+		// write header
+		vector<byte> toappend = { 0x6D, 0x65, 0x73, 0x68, 0x07, 0x00, 0x01, 0x00 };
+		mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+		// write vertex cound
+		toappend = getBytes(vertexCount);
+		mesh.insert(mesh.end(), toappend.begin(), toappend.end());
 
+		toappend = { 0x13, 0x00, 0x00, 0x00 };
+		mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+
+		uint32_t tc = 0;
+		error = "vtxDefWrie";
+		for each (SubMesh sm in submeshes)
+		{
+
+			for each (Vertex v in sm._vertices) {
+				vector<byte> vtxDef;
+				toappend = getBytes(v._px);
+				vtxDef.insert(vtxDef.end(), toappend.begin(), toappend.end());
+				toappend = getBytes(v._py);
+				vtxDef.insert(vtxDef.end(), toappend.begin(), toappend.end());
+				toappend = getBytes(v._pz);
+				vtxDef.insert(vtxDef.end(), toappend.begin(), toappend.end());
+
+				vtxDef.push_back(sm._r);
+				vtxDef.push_back(sm._g);
+				vtxDef.push_back(sm._b);
+				vtxDef.push_back(sm._a);
+
+				toappend = getBytes(v._n._x);
+				vtxDef.insert(vtxDef.end(), toappend.begin(), toappend.end());
+				toappend = getBytes(v._n._y);
+				vtxDef.insert(vtxDef.end(), toappend.begin(), toappend.end());
+				toappend = getBytes(v._n._z);
+
+				mesh.insert(mesh.end(), vtxDef.begin(), vtxDef.end());
+
+			}
+			tc += sm._triangles.size();
+		}
+
+		toappend = getBytes(tc * 3);
+		mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+
+		error = "faceWrite";
+		for each (SubMesh sm in submeshes) {
+			for each (Triangle t in sm._triangles) {
+				vector<byte> tDef;
+				toappend = getBytes(t._v1);
+				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
+				toappend = getBytes(t._v2);
+				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
+				toappend = getBytes(t._v3);
+				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
+				mesh.insert(mesh.end(), tDef.begin(), tDef.end());
+
+			}
+		}
+		toappend = getBytes((uint16_t)submeshes.size());
+		mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+		uint32_t subMeshPosition = 0;
+		error = "subWrite";
+
+		for each (SubMesh sm in submeshes) {
+			toappend = getBytes(subMeshPosition);
+			mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+			subMeshPosition += (uint32_t)sm._triangles.size() * 3;
+			toappend = getBytes((uint32_t)sm._triangles.size() * 3);
+			mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+			toappend = { 0x00, 0x00 };
+			mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+			toappend = getBytes(sm._shader);
+			mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+			for each (float f in sm._cullingMin) {
+				toappend = getBytes(f);
+				mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+			}
+			for each (float f in sm._cullingMax) {
+				toappend = getBytes(f);
+				mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+			}
+			toappend = { 0x00, 0x00, 0x03, 0x00, 0x49, 0x44, 0x33, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x80, 0x3F };
+			mesh.insert(mesh.end(), toappend.begin(), toappend.end());
+		}
+		toappend = { 0x00, 0x00 };
+		mesh.insert(mesh.end(), toappend.begin(), toappend.end());;
+
+		ofstream fs;
+		fs.open(_pathToOutput);
+		for each (byte b in mesh) {
+			fs << b;
+		}
+		fs.close();
+	}
+	catch (exception e) {
+		cout << "Could not convert obejct, error code: " << error << endl;
 	}
 }
+
+
+int main(int argc, char **argv)
+{
+	if (argc != 3) {
+		cout << "invalid number of arguements, please run this tool from the command line" << endl;
+
+	}
+	else
+	{
+		_pathToMesh = argv[1];
+		_pathToOutput = argv[2];
+		
+	}
+
+	_pathToMesh = "tactical_log.obj";
+	_pathToOutput = "out.mesh";
+	cout << "Reading from " << _pathToMesh << ", Writing to " << _pathToOutput << endl;
+	ifstream ifs;
+	string line;
+	vector<string> bin;
+	ifs.open(_pathToMesh);
+	while (getline(ifs, line)) {
+		bin.push_back(line);
+	}
+	objToMesh(bin);
+
+	// main bit of code
+
+}
+
+
+
+

@@ -1,0 +1,5 @@
+C:/Users/lewis/source/repos/swcpmc/swcpmc/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+C:/Users/lewis/source/repos/swcpmc/swcpmc/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
+C:/Users/lewis/source/repos/swcpmc/swcpmc/out/build/x64-Debug/swcpmc/CMakeFiles/edit_cache.dir
+C:/Users/lewis/source/repos/swcpmc/swcpmc/out/build/x64-Debug/swcpmc/CMakeFiles/swcpmc.dir
+C:/Users/lewis/source/repos/swcpmc/swcpmc/out/build/x64-Debug/swcpmc/CMakeFiles/rebuild_cache.dir
