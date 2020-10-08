@@ -246,6 +246,7 @@ void objToMesh(vector<string> data) {
 				submeshes[currentSubmesh].setShader(shaderID);
 			}
 
+			
 			// face f
 			else if (data[i].rfind('f', 0) == 0) {
 				vector<string> t = split(data[i], ' ');
@@ -313,7 +314,7 @@ void objToMesh(vector<string> data) {
 				mesh.insert(mesh.end(), vtxDef.begin(), vtxDef.end());
 
 			}
-			tc += sm._triangles.size();
+			tc += (uint32_t) sm._triangles.size();
 		}
 
 		toappend = getBytes(tc * 3);
@@ -322,13 +323,17 @@ void objToMesh(vector<string> data) {
 		error = "faceWrite";
 		for each (SubMesh sm in submeshes) {
 			for each (Triangle t in sm._triangles) {
-				vector<byte> tDef;
-				toappend = getBytes(t._v1);
+				vector<byte> tDef = {};
+				toappend = getBytes((uint16_t)t._v1);
 				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
-				toappend = getBytes(t._v3);
+				toappend = getBytes((uint16_t)t._v3);
 				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
-				toappend = getBytes(t._v2);
+				toappend = getBytes((uint16_t)t._v2);
+				cout << (uint16_t)t._v2 << endl;
+				cout << toappend.size() << endl;
+				
 				tDef.insert(tDef.end(), toappend.begin(), toappend.end());
+				
 				mesh.insert(mesh.end(), tDef.begin(), tDef.end());
 
 			}
@@ -362,11 +367,12 @@ void objToMesh(vector<string> data) {
 		toappend = { 0x00, 0x00 };
 		mesh.insert(mesh.end(), toappend.begin(), toappend.end());;
 
+
+		// Stupid workaround to cater for microsoft's idiocy, and inability to follow unix standards
 		ofstream fs;
-		fs.open(_pathToOutput);
-		for each (byte b in mesh) {
-			fs << b;
-		}
+		fs.open(_pathToOutput, ios_base::binary | ios_base::out );
+		fs.write((char*)&mesh[0], mesh.size());
+		
 		fs.close();
 	}
 	catch (exception e) {
